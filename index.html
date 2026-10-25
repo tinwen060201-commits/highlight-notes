@@ -300,7 +300,7 @@ async function askAI(content,{maxTokens=8192,signal}={}){
     res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:"POST",signal,
       headers:{"content-type":"application/json","x-goog-api-key":key},
       body:JSON.stringify({contents:[{role:"user",parts}],
-        generationConfig:{responseMimeType:"application/json",maxOutputTokens:maxTokens,temperature:0.2}})});
+        generationConfig:{responseMimeType:"application/json",maxOutputTokens:maxTokens,temperature:0}})});
   }catch(e){ if(e.name==="AbortError") throw {cancel:true}; throw {msg:"連不上網路，請確認連線後再試。"}; }
   const body=await res.json().catch(()=>({}));
   if(!res.ok){
@@ -380,13 +380,25 @@ $("#file").onchange=e=>{
 function updateGo(){$("#go").disabled=!files.length;}
 
 /* ---------- recognise ---------- */
-const OCR_PROMPT = hint => `這是一張書頁照片（繁體或簡體中文，也可能是英文）。讀者用筆在部分文字上做了記號：底線、螢光筆、框線、括號、圈選或頁邊直線。
-任務：
-1. 只擷取「有被做記號」的文字，逐字照抄原文（保留原本的標點與用字，不要改寫、不要翻譯）。跨行的同一段要接成一段。沒有記號的文字一律忽略。
-2. 每一段附一句 15 字以內的重點概括（繁體中文）。
-3. 若頁首、頁尾看得出書名就填入 book_guess，否則空字串。${hint?`使用者說這本書是「${hint}」。`:""}
-若整頁沒有任何記號，passages 回傳空陣列。
-只回覆 JSON，不要其他文字，格式：{"book_guess":"","passages":[{"text":"原文","summary":"概括"}]}`;
+const OCR_PROMPT = hint => `這是一張書頁照片（繁體或簡體中文，也可能是英文）。讀者用「螢光筆」在部分文字上塗了底色。
+
+【只擷取有螢光筆底色的文字】
+- 判斷標準：文字背後有一層半透明的彩色底色（常見黃、粉紅、綠、藍、橘），顏色和紙張原本的白色／米色明顯不同，邊緣通常不太整齊，像是手塗上去的。
+- 底色可能跨好幾行。同一段連續塗色的文字要接成一段，換行處直接接上。
+- 只抄有底色覆蓋的範圍，底色開始前、結束後的文字都不要抄進來。
+
+【以下都不算，一律忽略】
+- 沒有底色的一般文字，即使就在塗色段落的旁邊。
+- 只有底線、圈選、括號、頁邊畫線，但沒有塗底色的文字。
+- 書本印刷本身的設計：灰色或淺色的印刷色塊、方框、引言框、粗體、標題、頁首頁尾、頁碼、圖說。這些是印刷出來的（顏色均勻、邊緣筆直），不是讀者畫的。
+
+【輸出】
+1. text：逐字照抄原文，保留原本的標點與用字，不要改寫、不要翻譯、不要補字。看不清楚的字用「□」代替。
+2. summary：一句 15 字以內的重點概括（繁體中文）。
+3. color：這段螢光筆的顏色（例如「黃」「粉紅」）。
+4. book_guess：頁首或頁尾看得出書名就填入，否則空字串。${hint?`使用者說這本書是「${hint}」。`:""}
+先仔細看整頁哪些地方有螢光筆底色，再抄寫。若整頁沒有任何螢光筆底色，passages 回傳空陣列，不要勉強湊。
+只回覆 JSON，不要其他文字，格式：{"book_guess":"","passages":[{"text":"原文","summary":"概括","color":"黃"}]}`;
 
 $("#go").onclick=async()=>{
   if(!settings().key){refreshKeyNotice();$("#scanStatus").className="status err";$("#scanStatus").textContent="請先到「設定」貼上 API 金鑰。";return;}
@@ -403,7 +415,7 @@ $("#go").onclick=async()=>{
       const r=await askAI([{type:"image",source:{type:"base64",media_type:"image/jpeg",data}},{type:"text",text:OCR_PROMPT(hint)}],{signal:ctl.signal});
       const guess=(r?.book_guess||"").trim();
       (Array.isArray(r?.passages)?r.passages:[]).forEach(p=>{
-        if(p?.text) pending.push({text:String(p.text).trim(),summary:String(p.summary||"").trim(),book:hint||guess||"未分類",page:i+1,keep:true});
+        if(p?.text) pending.push({color:String(p.color||"").trim(),text:String(p.text).trim(),summary:String(p.summary||"").trim(),book:hint||guess||"未分類",page:i+1,keep:true});
       });
       renderPending();
     }catch(e){
@@ -421,7 +433,7 @@ function renderPending(){
   const box=$("#results"); box.innerHTML="";
   pending.forEach((p,i)=>{
     const c=document.createElement("div"); c.className="card"+(p.keep?"":" off");
-    c.innerHTML=`<div class="meta"><span>第 ${p.page} 張・段落 ${i+1}</span>
+    c.innerHTML=`<div class="meta"><span>第 ${p.page} 張・段落 ${i+1}${p.color?`・${esc(p.color)}色螢光筆`:""}</span>
       <label class="row" style="gap:4px"><input type="checkbox" ${p.keep?"checked":""}>保留</label></div>
       <textarea aria-label="段落原文">${esc(p.text)}</textarea>
       <div class="row" style="flex-wrap:nowrap"><span class="gist" style="flex:none">概括</span><input type="text" data-f="summary" value="${esc(p.summary)}"></div>
