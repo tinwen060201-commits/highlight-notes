@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="劃線筆記">
+<meta name="theme-color" content="#e8f1ee">
+<title>劃線筆記本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap">
+<style>
+/* Cartoon walnut bookshelf: chunky ink outlines, offset "sticker" shadows, cubby grid like a real 3x4 shelf; books are vertical spines. */
+:root{
+  --wall:#e8f1ee; --wallDot:#d6e6e1;
+  --sheet:#fffdf8; --ink:#3b2416; --text:#2d2018; --muted:#7a6656;
+  --wood:#c08a58; --woodHi:#d9a774; --woodLo:#8e5f37; --cubby:#6f4a2c; --cubbyHi:#7f5634;
+  --mark:#ffd84d; --markInk:#3b2416; --accent:#2f7d8a; --accentSoft:#d5ece9; --danger:#c8402f;
+  --s1:#e5654e; --s2:#f2b632; --s3:#3f9a8a; --s4:#36557f; --s5:#93ad6a; --s6:#e58ea6; --s7:#8b6bb5; --s8:#f08a3c;
+  --b1:#36557f; --b2:#3f9a8a; --b3:#d0603a; --b4:#8b6bb5; --b5:#b58a0c; --b6:#d0567a;
+  --round:"Huninn","jf-openhuninn","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --line:2.5px solid var(--ink);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --wall:#1f2433; --wallDot:#272d3f;
+  --sheet:#2b2420; --ink:#140c07; --text:#f3e9de; --muted:#bba893;
+  --wood:#a8744a; --woodHi:#c08a58; --woodLo:#6e4627; --cubby:#4a3020; --cubbyHi:#563924;
+  --mark:#f2c94c; --markInk:#2a1a0e; --accent:#7fd0c4; --accentSoft:#263a3a; --danger:#ff8a78;
+  --b1:#8fb2e3; --b2:#7fd0c4; --b3:#f29a74; --b4:#c4a5ea; --b5:#efcf5c; --b6:#f39ab6;
+  color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--wall);color:var(--text)}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{font-family:var(--round);font-size:16px;line-height:1.7;-webkit-text-size-adjust:100%;
+  background-image:radial-gradient(var(--wallDot) 2px,transparent 2.5px);background-size:22px 22px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--wall)}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
+
+/* header = wooden sign + sticker tabs */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--wall);padding-block:12px 10px}
+.top{display:flex;justify-content:center}
+h1{margin:0;font-size:22px;letter-spacing:.06em;color:#fff7ea;background:var(--wood);border:var(--line);border-radius:14px;
+  padding:4px 18px;box-shadow:0 4px 0 var(--woodLo),0 4px 0 2.5px var(--ink);position:relative;text-shadow:0 2px 0 var(--woodLo)}
+h1 .hl{color:var(--markInk);background:var(--mark);border-radius:8px;padding:0 6px;text-shadow:none;margin-right:2px}
+.tabs{display:flex;gap:8px;margin-top:14px}
+.tab{flex:1;font:inherit;font-size:15px;color:var(--text);background:var(--sheet);border:var(--line);border-radius:999px;padding:7px 4px;cursor:pointer;box-shadow:2px 3px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.tab[aria-selected="true"]{background:var(--mark);color:var(--markInk)}
+.tab:active,.btn:active{transform:translate(2px,2px);box-shadow:0 1px 0 var(--ink)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,label:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+section{display:flex;flex-direction:column;gap:16px;padding-top:12px}
+.lbl{font-size:14px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px}
+input[type=text],input[type=password],select,textarea{-webkit-appearance:none;appearance:none;font:inherit;font-size:16px;color:var(--text);background:var(--sheet);border:var(--line);border-radius:14px;padding:10px 14px;width:100%;box-shadow:inset 0 2px 0 rgba(0,0,0,.06)}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);background-position:calc(100% - 20px) 55%,calc(100% - 14px) 55%;background-size:6px 6px;background-repeat:no-repeat;padding-right:36px}
+textarea{resize:vertical;min-height:96px;line-height:1.8}
+.drop{display:flex;flex-direction:column;align-items:center;gap:6px;border:2.5px dashed var(--ink);border-radius:20px;padding:20px 12px;text-align:center;background:var(--sheet);cursor:pointer}
+.drop strong{font-size:18px}
+.drop small{color:var(--muted);font-size:13px}
+.drop svg{width:56px;height:56px}
+.thumbs{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px}
+.thumbs img{width:64px;height:84px;object-fit:cover;border-radius:10px;border:var(--line);flex:none;box-shadow:2px 3px 0 var(--ink)}
+.btn{font:inherit;font-size:16px;border:var(--line);border-radius:14px;padding:10px 18px;cursor:pointer;background:var(--accent);color:#fff;box-shadow:2px 3px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.btn.sec{background:var(--sheet);color:var(--text)}
+.btn.ghost{background:none;border-color:transparent;box-shadow:none;color:var(--muted);padding:6px 10px}
+.btn.danger{background:none;border-color:transparent;box-shadow:none;color:var(--danger);padding:6px 10px}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.status{font-size:14px;color:var(--muted);min-height:1.2em}
+.err{color:var(--danger)}
+.card{background:var(--sheet);border:var(--line);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0;box-shadow:3px 4px 0 var(--ink)}
+.card.off{opacity:.45}
+.quote{line-height:1.9;margin:0;white-space:pre-wrap;word-break:break-word}
+.quote mark{background:linear-gradient(transparent 52%,var(--mark) 52%);color:inherit;border-radius:3px}
+.gist{font-size:14px;color:var(--muted);margin:0}
+.gist b{color:var(--text);font-weight:400}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.empty-sign{align-self:center;background:var(--sheet);border:var(--line);border-radius:14px;padding:10px 16px;box-shadow:3px 4px 0 var(--ink);text-align:center;font-size:15px}
+
+/* ---- the bookshelf ---- */
+.shelf{background:var(--wood);border:3px solid var(--ink);border-radius:18px 18px 8px 8px;padding:10px;
+  box-shadow:inset 0 4px 0 var(--woodHi),inset 0 -6px 0 var(--woodLo),4px 6px 0 var(--ink);
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative}
+@media (min-width:560px){.shelf{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.cubby{height:150px;background:linear-gradient(var(--cubby),var(--cubbyHi));border:2.5px solid var(--ink);border-radius:8px;
+  box-shadow:inset 0 8px 0 rgba(0,0,0,.18),inset 6px 0 0 rgba(0,0,0,.08);
+  display:flex;align-items:flex-end;gap:3px;padding:0 8px;overflow:hidden;position:relative}
+.cubby::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;background:var(--woodHi);border-top:2.5px solid var(--ink)}
+.spine{position:relative;z-index:1;margin-bottom:7px;flex:none;font:inherit;cursor:pointer;color:#fffaf0;
+  border:2.5px solid var(--ink);border-radius:5px 5px 2px 2px;padding:12px 0 24px;
+  font-size:13px;line-height:1.15;text-align:center;
+  display:block;overflow:hidden;
+  box-shadow:inset -5px 0 0 rgba(0,0,0,.16),inset 4px 0 0 rgba(255,255,255,.18);
+  transition:transform .15s}
+.spine::before,.spine::after{content:"";position:absolute;left:0;right:0;height:3px;background:rgba(255,255,255,.55)}
+.spine::before{top:6px}.spine::after{bottom:16px}
+.spine .cnt{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:11px;
+  background:#fffaf0;color:var(--ink);border-radius:6px;padding:0 4px;line-height:1.3;font-variant-numeric:tabular-nums}
+.spine .ttl{display:flex;flex-direction:column;align-items:center;height:100%;overflow:hidden;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.spine.lean{transform:rotate(-9deg);transform-origin:bottom left;margin-left:10px}
+.spine:hover{transform:translateY(-6px)}
+.spine.lean:hover{transform:rotate(-9deg) translateY(-6px)}
+.deco{position:relative;z-index:1;margin:0 auto 7px;width:64px;height:64px}
+.shelf-legs{display:flex;justify-content:space-between;padding:0 24px;margin-top:-10px}
+.shelf-legs span{width:24px;height:14px;background:var(--woodLo);border:2.5px solid var(--ink);border-top:0;border-radius:0 0 6px 6px}
+.shelf-note{font-size:13px;color:var(--muted);text-align:center;margin:0}
+
+/* book page */
+.book-head{display:flex;align-items:center;gap:12px}
+.book-head .mini{width:26px;height:64px;border:var(--line);border-radius:4px;flex:none;box-shadow:inset -4px 0 0 rgba(0,0,0,.16)}
+#bookTitle{margin:0;font-size:24px;line-height:1.3;text-wrap:balance;font-weight:400}
+.seg{display:flex;background:var(--sheet);border:var(--line);border-radius:999px;padding:4px;gap:4px;box-shadow:2px 3px 0 var(--ink)}
+.seg button{flex:1;font:inherit;border:0;background:none;color:var(--muted);padding:6px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--mark);color:var(--markInk)}
+.mapbox{overflow:auto;background:var(--sheet);border:var(--line);border-radius:18px;max-height:70vh;-webkit-overflow-scrolling:touch;box-shadow:3px 4px 0 var(--ink)}
+.mapbox svg{display:block}
+.mapbox text{font-family:var(--round)}
+.node{cursor:pointer}
+.pop{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--sheet);border-top:3px solid var(--ink);border-radius:22px 22px 0 0;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  max-height:60vh;overflow:auto;display:flex;flex-direction:column;gap:8px;box-shadow:0 -6px 0 rgba(0,0,0,.12)}
+.pop h3{margin:0;font-size:18px;font-weight:400}
+.notice{font-size:14px;background:var(--accentSoft);color:var(--text);padding:10px 14px;border-radius:14px;border:var(--line)}
+.help{font-size:14px;color:var(--muted);margin:0}
+.help a{color:var(--accent)}
+.chipRow{display:flex;justify-content:center;margin-top:8px}
+.chip{font:inherit;font-size:12px;color:var(--muted);background:var(--sheet);border:2px solid var(--ink);border-radius:999px;padding:1px 10px;cursor:pointer}
+.chip.on{color:var(--markInk);background:var(--accentSoft)}
+.chip::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:1px}
+.chip.on::before{background:#3f9a8a}
+hr{border:0;border-top:2.5px dashed var(--muted);width:100%;opacity:.5}
+@media (prefers-reduced-motion:reduce){.spine,.tab,.btn{transition:none}.spine:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <h1><span class="hl">劃線</span>筆記本</h1>
+    </div>
+    <div class="chipRow"><button class="chip" id="syncChip">只存在這支手機</button></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-scan" role="tab" aria-selected="true">拍照辨識</button>
+      <button class="tab" id="tab-shelf" role="tab" aria-selected="false">書櫃</button>
+      <button class="tab" id="tab-set" role="tab" aria-selected="false">設定</button>
+    </div>
+  </header>
+
+  <!-- 辨識 -->
+  <section id="v-scan">
+    <div id="needKey" class="notice" hidden>還沒設定 API 金鑰。請先到「設定」貼上金鑰，才能辨識。</div>
+    <div class="field">
+      <label class="lbl" for="book">書名</label>
+      <input type="text" id="book" list="booklist" placeholder="例如：原子習慣（留空讓 AI 從頁首判斷）" autocomplete="off">
+      <datalist id="booklist"></datalist>
+    </div>
+    <label class="drop" for="file">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="18" width="52" height="38" rx="8" fill="var(--accent)" stroke="var(--ink)" stroke-width="2.5"/><path d="M22 18l4-8h12l4 8" fill="var(--mark)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/><circle cx="32" cy="37" r="11" fill="#fffaf0" stroke="var(--ink)" stroke-width="2.5"/><circle cx="32" cy="37" r="5" fill="var(--ink)"/><circle cx="49" cy="27" r="2.5" fill="#fffaf0"/></svg>
+      <strong>選擇或拍攝書頁照片</strong>
+      <small>可一次選多張。AI 只會擷取你劃線、螢光筆或框起來的段落。</small>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </label>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="row">
+      <button class="btn" id="go" disabled>辨識劃線段落</button>
+      <button class="btn ghost" id="stop" hidden>停止</button>
+    </div>
+    <div class="status" id="scanStatus"></div>
+    <div id="results" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div class="row" id="saveRow" hidden>
+      <button class="btn" id="save">儲存勾選的段落</button>
+      <span class="status" id="saveStatus"></span>
+    </div>
+  </section>
+
+  <!-- 書櫃 -->
+  <section id="v-shelf" hidden><div id="shelfList"></div></section>
+
+  <!-- 單本書 -->
+  <section id="v-book" hidden>
+    <button class="btn ghost back" id="backShelf">← 書櫃</button>
+    <div class="book-head"><span class="mini" id="bookMini"></span><h2 id="bookTitle"></h2></div>
+    <div class="seg">
+      <button id="seg-notes" aria-pressed="true">段落</button>
+      <button id="seg-map" aria-pressed="false">心智圖</button>
+    </div>
+    <div id="bookNotes" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div id="bookMap" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div id="mapStale" class="notice" hidden></div>
+      <div class="row">
+        <button class="btn" id="genMap">產生心智圖</button>
+        <span class="status" id="mapStatus"></span>
+      </div>
+      <div class="mapbox" id="mapBox" hidden></div>
+    </div>
+    <div class="row">
+      <button class="btn sec" id="copyBook">複製全部段落</button>
+      <span class="status" id="copyStatus"></span>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section id="v-set" hidden>
+    <div class="field">
+      <span class="lbl">雲端同步</span>
+      <div id="cloudBox" style="display:flex;flex-direction:column;gap:10px"></div>
+      <span class="status" id="cloudStatus"></span>
+    </div>
+    <hr>
+    <div class="field">
+      <label class="lbl" for="key">Gemini API 金鑰</label>
+      <input type="password" id="key" placeholder="AIza..." autocomplete="off">
+      <p class="help">金鑰只存在這支手機的瀏覽器裡，不會上傳到 GitHub。到 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 按「Create API key」取得金鑰。</p>
+    </div>
+    <div class="field">
+      <label class="lbl" for="model">模型</label>
+      <select id="model">
+        <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite（預設・便宜快速）</option>
+        <option value="gemini-3.8-flash">gemini-3.8-flash（辨識最準）</option>
+        <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+        <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite（最省）</option>
+      </select>
+      <p class="help">如果劃線段落常常漏抓或抓錯，改用 gemini-3.8-flash 會比較準。</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="saveKey">儲存設定</button>
+      <span class="status" id="keyStatus"></span>
+    </div>
+    <hr>
+    <div class="field">
+      <span class="lbl">備份</span>
+      <p class="help">把目前書櫃裡的筆記匯出成一個檔案，或從備份檔匯入。沒有登入雲端時，清除瀏覽資料或換手機前記得先匯出。</p>
+      <div class="row">
+        <button class="btn sec" id="exportBtn">匯出備份</button>
+        <label class="btn sec" for="importFile">匯入備份</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <span class="status" id="backupStatus"></span>
+    </div>
+  </section>
+</div>
+<div class="pop" id="pop" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LS = {
+  get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}
+};
+const DEFAULT_MODEL="gemini-3.5-flash-lite";
+let state = LS.get("hn-data",{notes:[],maps:{}});
+let files=[], pending=[], curBook=null, ctl=null;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function persist(){ if(!LS.set("hn-data",state)) alert("儲存失敗：瀏覽器空間不足或處於私密模式。"); }
+const settings=()=>({key:LS.get("hn-gkey",""),model:LS.get("hn-gmodel",DEFAULT_MODEL)||DEFAULT_MODEL});
+
+/* ---------- views ---------- */
+function show(view){
+  ["scan","shelf","book","set"].forEach(v=>$("#v-"+v).hidden = v!==view);
+  $("#tab-scan").setAttribute("aria-selected", view==="scan");
+  $("#tab-shelf").setAttribute("aria-selected", view==="shelf"||view==="book");
+  $("#tab-set").setAttribute("aria-selected", view==="set");
+  $("#pop").hidden = true; window.scrollTo(0,0);
+}
+$("#tab-scan").onclick=()=>{refreshKeyNotice();show("scan")};
+$("#tab-shelf").onclick=()=>{renderShelf();show("shelf")};
+$("#tab-set").onclick=()=>{renderAccount();$("#key").value=settings().key;setModelSelect(settings().model);show("set")};
+$("#backShelf").onclick=()=>{renderShelf();show("shelf")};
+
+/* ---------- settings ---------- */
+$("#saveKey").onclick=()=>{
+  LS.set("hn-gkey",$("#key").value.trim()); LS.set("hn-gmodel",$("#model").value.trim()||DEFAULT_MODEL);
+  $("#keyStatus").textContent="已儲存"; refreshKeyNotice(); updateGo();
+};
+function setModelSelect(m){
+  const sel=$("#model");
+  if(![...sel.options].some(o=>o.value===m)){const o=document.createElement("option");o.value=o.textContent=m;sel.append(o);}
+  sel.value=m;
+}
+function refreshKeyNotice(){$("#needKey").hidden=!!settings().key;}
+
+/* ---------- Gemini API ---------- */
+// content 用 [{type:"image",source:{media_type,data}},{type:"text",text}] 的格式傳入，這裡轉成 Gemini 的 parts
+async function askAI(content,{maxTokens=8192,signal}={}){
+  const {key,model}=settings();
+  if(!key) throw {msg:"還沒設定 API 金鑰，請到「設定」貼上。"};
+  const parts=content.map(c=>c.type==="image"
+    ? {inline_data:{mime_type:c.source.media_type,data:c.source.data}}
+    : {text:c.text});
+  let res;
+  try{
+    res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:"POST",signal,
+      headers:{"content-type":"application/json","x-goog-api-key":key},
+      body:JSON.stringify({contents:[{role:"user",parts}],
+        generationConfig:{responseMimeType:"application/json",maxOutputTokens:maxTokens,temperature:0.2}})});
+  }catch(e){ if(e.name==="AbortError") throw {cancel:true}; throw {msg:"連不上網路，請確認連線後再試。"}; }
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok){
+    const m=body?.error?.message||"", s=body?.error?.status||"";
+    if(res.status===400&&/API key/i.test(m) || res.status===401 || res.status===403) throw {msg:"API 金鑰無效或沒有權限，請到「設定」重新貼上。"};
+    if(res.status===429||s==="RESOURCE_EXHAUSTED") throw {msg:"已達免費額度或請求太頻繁，稍等一分鐘再試。"};
+    if(res.status===404) throw {msg:"找不到模型「"+model+"」，請到「設定」檢查模型名稱。"};
+    throw {msg:"AI 回覆錯誤（"+res.status+"）："+m};
+  }
+  const cand=body.candidates?.[0];
+  if(!cand) throw {msg:"這張圖片被 AI 拒絕處理，請換一張。"};
+  const text=(cand.content?.parts||[]).filter(p=>p.text&&!p.thought).map(p=>p.text).join("");
+  if(!text) throw {msg:cand.finishReason==="MAX_TOKENS"?"內容太多，AI 沒寫完。請一次少放一些。":"AI 沒有回覆內容，請再試一次。"};
+  return parseJSON(text);
+}
+function parseJSON(t){
+  try{return JSON.parse(t)}catch{}
+  const f=t.match(/```(?:json)?\s*([\s\S]*?)```/); if(f){try{return JSON.parse(f[1])}catch{}}
+  const a=t.indexOf("{"), b=t.lastIndexOf("}");
+  if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch{}}
+  throw {msg:"AI 回覆格式不完整，再按一次試試。"};
+}
+// 縮小照片：最長邊 1600px，JPEG，省流量也符合 API 限制
+function toJpegBase64(file){
+  return new Promise((ok,bad)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const s=Math.min(1,1600/Math.max(img.width,img.height));
+      const c=document.createElement("canvas"); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      ok(c.toDataURL("image/jpeg",0.85).split(",")[1]);
+    };
+    img.onerror=()=>bad({msg:"這張圖片無法讀取（若是 HEIC，請改用 JPG 或截圖）。"});
+    img.src=url;
+  });
+}
+
+/* ---------- data helpers ---------- */
+function books(){
+  const m=new Map();
+  state.notes.forEach(n=>{const k=n.book||"未分類";m.set(k,(m.get(k)||0)+1)});
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+}
+function fillBookList(){$("#booklist").innerHTML=books().map(([b])=>`<option value="${esc(b)}">`).join("");}
+
+/* ---------- pick images ---------- */
+$("#file").onchange=e=>{
+  files=[...e.target.files]; $("#thumbs").innerHTML="";
+  files.forEach(f=>{const i=new Image();i.src=URL.createObjectURL(f);i.alt="";$("#thumbs").append(i)});
+  updateGo();
+};
+function updateGo(){$("#go").disabled=!files.length;}
+
+/* ---------- recognise ---------- */
+const OCR_PROMPT = hint => `這是一張書頁照片（繁體或簡體中文，也可能是英文）。讀者用筆在部分文字上做了記號：底線、螢光筆、框線、括號、圈選或頁邊直線。
+任務：
+1. 只擷取「有被做記號」的文字，逐字照抄原文（保留原本的標點與用字，不要改寫、不要翻譯）。跨行的同一段要接成一段。沒有記號的文字一律忽略。
+2. 每一段附一句 15 字以內的重點概括（繁體中文）。
+3. 若頁首、頁尾看得出書名就填入 book_guess，否則空字串。${hint?`使用者說這本書是「${hint}」。`:""}
+若整頁沒有任何記號，passages 回傳空陣列。
+只回覆 JSON，不要其他文字，格式：{"book_guess":"","passages":[{"text":"原文","summary":"概括"}]}`;
+
+$("#go").onclick=async()=>{
+  if(!settings().key){refreshKeyNotice();$("#scanStatus").className="status err";$("#scanStatus").textContent="請先到「設定」貼上 API 金鑰。";return;}
+  pending=[]; renderPending();
+  const hint=$("#book").value.trim();
+  $("#go").disabled=true; $("#stop").hidden=false;
+  const st=$("#scanStatus"); st.className="status"; let failed=false;
+  for(let i=0;i<files.length;i++){
+    st.textContent=`辨識第 ${i+1} / ${files.length} 張…（每張約 10–30 秒）`;
+    ctl=new AbortController();
+    try{
+      const data=await toJpegBase64(files[i]);
+      const r=await askAI([{type:"image",source:{type:"base64",media_type:"image/jpeg",data}},{type:"text",text:OCR_PROMPT(hint)}],{signal:ctl.signal});
+      const guess=(r?.book_guess||"").trim();
+      (Array.isArray(r?.passages)?r.passages:[]).forEach(p=>{
+        if(p?.text) pending.push({text:String(p.text).trim(),summary:String(p.summary||"").trim(),book:hint||guess||"未分類",page:i+1,keep:true});
+      });
+      renderPending();
+    }catch(e){
+      if(e.cancel){st.textContent="已停止。";failed=true;break;}
+      st.className="status err"; st.textContent=e.msg||"發生錯誤，請再試一次。"; failed=true;
+      if(!/圖片/.test(e.msg||"")) break;
+    }
+  }
+  if(!failed) st.textContent = pending.length?`找到 ${pending.length} 段劃線文字，確認後儲存。`:"沒有找到劃線段落，換一張更清楚、光線均勻的照片試試。";
+  $("#stop").hidden=true; updateGo();
+};
+$("#stop").onclick=()=>ctl?.abort();
+
+function renderPending(){
+  const box=$("#results"); box.innerHTML="";
+  pending.forEach((p,i)=>{
+    const c=document.createElement("div"); c.className="card"+(p.keep?"":" off");
+    c.innerHTML=`<div class="meta"><span>第 ${p.page} 張・段落 ${i+1}</span>
+      <label class="row" style="gap:4px"><input type="checkbox" ${p.keep?"checked":""}>保留</label></div>
+      <textarea aria-label="段落原文">${esc(p.text)}</textarea>
+      <div class="row" style="flex-wrap:nowrap"><span class="gist" style="flex:none">概括</span><input type="text" data-f="summary" value="${esc(p.summary)}"></div>
+      <div class="row" style="flex-wrap:nowrap"><span class="gist" style="flex:none">書名</span><input type="text" data-f="book" list="booklist" value="${esc(p.book)}"></div>`;
+    box.append(c);
+    c.querySelector("input[type=checkbox]").onchange=e=>{p.keep=e.target.checked;c.classList.toggle("off",!p.keep)};
+    c.querySelector("textarea").oninput=e=>p.text=e.target.value;
+    c.querySelectorAll("input[data-f]").forEach(inp=>inp.oninput=e=>p[inp.dataset.f]=e.target.value);
+  });
+  $("#saveRow").hidden=!pending.length;
+}
+
+$("#save").onclick=async()=>{
+  const keep=pending.filter(p=>p.keep&&p.text.trim());
+  if(!keep.length){$("#saveStatus").textContent="沒有勾選任何段落。";return;}
+  const now=Date.now();
+  const list=keep.map((p,i)=>({id:uid(),book:cleanTitle(p.book)||"未分類",text:p.text.trim(),summary:p.summary.trim(),createdAt:now+i}));
+  $("#save").disabled=true;
+  try{ await Store.addNotes(list); $("#saveStatus").className="status"; $("#saveStatus").textContent=`已儲存 ${keep.length} 段。`; }
+  catch(e){ $("#save").disabled=false; $("#saveStatus").className="status err"; $("#saveStatus").textContent="儲存失敗："+(e.code||e.message)+"。請檢查網路或 Firestore 安全規則。"; return; }
+  $("#save").disabled=false;
+  pending=pending.filter(p=>!p.keep); renderPending();
+  files=[]; $("#thumbs").innerHTML=""; $("#file").value=""; updateGo();
+};
+
+/* ---------- shelf ---------- */
+const SPINES=["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"];
+const hash=s=>{let h=7;for(const c of s)h=(h*31+c.codePointAt(0))>>>0;return h};
+const cleanTitle=s=>String(s||"").replace(/[「」『』《》〈〉【】“”"'‘’]/g,"").trim();
+const spineChars=t=>[...(cleanTitle(t)||t)].map(c=>`<span>${esc(c)}</span>`).join("");
+const spineColor=t=>`var(${SPINES[hash(t)%SPINES.length]})`;
+const DECO=[
+ /* plant */ `<svg class="deco" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 40C20 34 14 22 18 12c8 4 14 14 14 28zM32 40c12-6 18-18 14-28-8 4-14 14-14 28z" fill="#7cbf6b" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/><path d="M32 42c-6-8-16-10-20-6 6 6 14 8 20 6z" fill="#5aa25a" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 42h24l-3 18H23z" fill="#e5654e" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 40h28v6H18z" fill="#f08a6c" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
+ /* clock */ `<svg class="deco" viewBox="0 0 64 64" aria-hidden="true"><circle cx="18" cy="16" r="6" fill="#f2b632" stroke="#3b2416" stroke-width="2.5"/><circle cx="46" cy="16" r="6" fill="#f2b632" stroke="#3b2416" stroke-width="2.5"/><circle cx="32" cy="36" r="20" fill="#3f9a8a" stroke="#3b2416" stroke-width="2.5"/><circle cx="32" cy="36" r="14" fill="#fffaf0" stroke="#3b2416" stroke-width="2.5"/><path d="M32 27v9l6 4" fill="none" stroke="#3b2416" stroke-width="2.5" stroke-linecap="round"/><path d="M18 54l-4 6M46 54l4 6" stroke="#3b2416" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+ /* stacked books lying down */ `<svg class="deco" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="46" width="48" height="12" rx="2" fill="#36557f" stroke="#3b2416" stroke-width="2.5"/><rect x="12" y="34" width="42" height="12" rx="2" fill="#e58ea6" stroke="#3b2416" stroke-width="2.5"/><rect x="10" y="22" width="40" height="12" rx="2" fill="#f2b632" stroke="#3b2416" stroke-width="2.5"/><path d="M16 40h30M14 52h36M16 28h28" stroke="#fffaf0" stroke-width="2" stroke-linecap="round" opacity=".7"/></svg>`,
+ /* mug */ `<svg class="deco" viewBox="0 0 64 64" aria-hidden="true"><path d="M26 10c-3 4 3 6 0 10M34 8c-3 4 3 6 0 10" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-linecap="round" opacity=".8"/><path d="M14 24h32v24a10 10 0 0 1-10 10H24a10 10 0 0 1-10-10z" fill="#fffaf0" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/><path d="M46 30h4a7 7 0 0 1 0 14h-4" fill="none" stroke="#3b2416" stroke-width="2.5"/><path d="M22 36c3 4 13 4 16 0" fill="none" stroke="#e5654e" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+ /* little box */ `<svg class="deco" viewBox="0 0 64 64" aria-hidden="true"><path d="M12 26l20-8 20 8v26l-20 8-20-8z" fill="#8b6bb5" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/><path d="M12 26l20 8 20-8M32 34v26" fill="none" stroke="#3b2416" stroke-width="2.5" stroke-linejoin="round"/><path d="M22 22l20 8" stroke="#f2b632" stroke-width="4"/></svg>`
+];
+function renderShelf(){
+  const b=books(), el=$("#shelfList");
+  const perCubby=window.innerWidth<560?3:4;
+  const cubbies=Math.max(6, Math.ceil(b.length/perCubby)+1);
+  const cells=Array.from({length:cubbies},()=>[]);
+  b.forEach((x,i)=>cells[Math.floor(i/perCubby)].push(x));
+  let decoN=0;
+  const html=cells.map((books,ci)=>{
+    if(!books.length) return `<div class="cubby">${DECO[(decoN++ + ci)%DECO.length]}</div>`;
+    return `<div class="cubby">${books.map(([t,n],j)=>{
+      const h=hash(t), height=112+(h%4)*8, width=Math.min(40+Math.min(n,20)*0.3,46);
+      const lean = j===books.length-1 && books.length<perCubby && books.length>1;
+      return `<button class="spine${lean?" lean":""}" data-b="${esc(t)}" title="${esc(t)}" style="background:${spineColor(t)};height:${height}px;width:${width}px"><span class="ttl">${spineChars(t)}</span><span class="cnt">${n}</span></button>`;
+    }).join("")}</div>`;
+  }).join("");
+  el.innerHTML=`<div class="shelf">${html}</div><div class="shelf-legs"><span></span><span></span></div>`+
+    (b.length?`<p class="shelf-note">點書背打開。書背越厚，劃線越多。</p>`
+             :`<div class="empty-sign">書櫃還空空的<br><small style="color:var(--muted)">到「拍照辨識」上傳一張劃線書頁吧</small></div>`);
+  el.querySelectorAll(".spine").forEach(x=>x.onclick=()=>{curBook=x.dataset.b;setSeg("notes");renderBook();show("book")});
+}
+
+/* ---------- one book ---------- */
+const bookNotes=()=>state.notes.filter(n=>(n.book||"未分類")===curBook);
+function setSeg(s){
+  $("#seg-notes").setAttribute("aria-pressed",s==="notes");$("#seg-map").setAttribute("aria-pressed",s==="map");
+  $("#bookNotes").hidden=s!=="notes";$("#bookMap").hidden=s!=="map";$("#pop").hidden=true;
+}
+$("#seg-notes").onclick=()=>setSeg("notes");
+$("#seg-map").onclick=()=>{setSeg("map");renderMap()};
+
+function renderBook(){
+  $("#bookTitle").textContent=curBook; $("#bookMini").style.background=spineColor(curBook);
+  const ns=bookNotes(), el=$("#bookNotes");
+  if(!ns.length){renderShelf();show("shelf");return;}
+  el.innerHTML="";
+  ns.forEach(n=>{
+    const c=document.createElement("div");c.className="card";
+    c.innerHTML=`<p class="quote"><mark>${esc(n.text)}</mark></p>
+      ${n.summary?`<p class="gist">重點：<b>${esc(n.summary)}</b></p>`:""}
+      <div class="meta"><span>${n.createdAt?new Date(n.createdAt).toLocaleDateString("zh-TW"):""}</span>
+      <span class="row" style="gap:0"><button class="btn ghost" data-a="move">改書名</button><button class="btn danger" data-a="del">刪除</button></span></div>`;
+    c.querySelector('[data-a="del"]').onclick=e=>{
+      const b=e.target;
+      if(b.dataset.sure){Store.deleteNote(n.id).catch(err=>alertBox("刪除失敗："+(err.code||err.message)));}
+      else{b.dataset.sure=1;b.textContent="再按一次確認刪除";}
+    };
+    c.querySelector('[data-a="move"]').onclick=()=>{
+      const m=c.querySelector(".meta");
+      m.innerHTML=`<input type="text" list="booklist" value="${esc(n.book)}"><button class="btn sec">移動</button>`;
+      m.querySelector("button").onclick=()=>{Store.updateNote(n.id,{book:cleanTitle(m.querySelector("input").value)||"未分類"}).catch(err=>alertBox("移動失敗："+(err.code||err.message)));};
+    };
+    el.append(c);
+  });
+  renderMap();
+}
+
+$("#copyBook").onclick=async()=>{
+  const t=`《${curBook}》劃線筆記\n\n`+bookNotes().map((n,i)=>`${i+1}. ${n.text}${n.summary?`\n   → ${n.summary}`:""}`).join("\n\n");
+  try{await navigator.clipboard.writeText(t);$("#copyStatus").textContent="已複製";}
+  catch{const ta=document.createElement("textarea");ta.value=t;$("#bookNotes").prepend(ta);ta.select();$("#copyStatus").textContent="已選取文字，請手動複製";}
+};
+
+/* ---------- mind map ---------- */
+$("#genMap").onclick=async()=>{
+  const ns=bookNotes().slice(-150);
+  const list=ns.map((n,i)=>`[${i}] ${n.text.slice(0,300)}`).join("\n");
+  const prompt=`以下是讀者從《${curBook}》劃線摘錄的段落，編號在方括號內。
+請把它們整理成心智圖：
+- center：用 12 字以內概括這本書（依這些段落）。
+- branches：3 到 7 個主題，每個主題有 title（8 字以內）、summary（20 字以內概括）、notes（屬於此主題的段落編號陣列）。
+- 每個段落編號都要出現在恰好一個主題。
+- leaf：為每個段落寫 12 字以內的短標籤，用物件表示 {"編號":"短標籤"}。
+全部使用繁體中文。只回覆 JSON，不要其他文字：{"center":"","branches":[{"title":"","summary":"","notes":[0,1]}],"leaf":{"0":""}}
+
+段落：
+${list}`;
+  $("#genMap").disabled=true; const st=$("#mapStatus"); st.className="status"; st.textContent="AI 整理中…（約 15–40 秒）";
+  try{
+    const r=await askAI([{type:"text",text:prompt}],{maxTokens:12000});
+    const branches=(r?.branches||[]).map(b=>({title:String(b.title||""),summary:String(b.summary||""),
+      noteIds:(b.notes||[]).map(Number).filter(i=>ns[i]).map(i=>ns[i].id)}));
+    const leaf={}; Object.entries(r?.leaf||{}).forEach(([k,v])=>{if(ns[+k]) leaf[ns[+k].id]=String(v)});
+    await Store.saveMap(curBook,{center:String(r?.center||curBook),branches,leaf,noteCount:bookNotes().length,updatedAt:Date.now()});
+    st.textContent=""; renderMap();
+  }catch(e){st.className="status err";st.textContent=e.msg||"產生失敗，請再試一次。";}
+  $("#genMap").disabled=false;
+};
+
+function wrapLines(s,n){const a=[];for(let i=0;i<s.length;i+=n)a.push(s.slice(i,i+n));return a.slice(0,3);}
+function renderMap(){
+  const m=state.maps[curBook], box=$("#mapBox"), stale=$("#mapStale");
+  const ns=bookNotes(); const byId=Object.fromEntries(ns.map(n=>[n.id,n]));
+  if(!m){box.hidden=true;stale.hidden=true;$("#genMap").textContent="產生心智圖";return;}
+  $("#genMap").textContent="重新產生";
+  const diff=ns.length-(m.noteCount||0);
+  stale.hidden=!diff; if(diff) stale.textContent=`有 ${Math.abs(diff)} 段${diff>0?"新增":"刪除"}的筆記還沒整理進心智圖，按「重新產生」更新。`;
+  const used=new Set();
+  const br=m.branches.map(b=>({...b,ids:b.noteIds.filter(id=>byId[id]&&!used.has(id)&&used.add(id))}));
+  const rest=ns.filter(n=>!used.has(n.id)).map(n=>n.id);
+  if(rest.length) br.push({title:"其他",summary:"尚未分類的新段落",ids:rest});
+  const RH=40, PAD=24, X0=16, X1=190, X2=410, W=680;
+  let y=PAD; const leaves=[];
+  br.forEach((b,bi)=>{const ys=[]; const ids=b.ids.length?b.ids:[null];
+    ids.forEach(id=>{if(id) leaves.push({id,y,bi}); ys.push(y); y+=RH;}); y+=10; b.y=(ys[0]+ys[ys.length-1])/2;});
+  const H=Math.max(y+PAD-10,200), cy=H/2;
+  const color=i=>`var(--b${i%6+1})`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(curBook)} 心智圖">`;
+  br.forEach((b,bi)=>{
+    s+=`<path d="M${X0+150},${cy} C${X1-20},${cy} ${X1-40},${b.y} ${X1},${b.y}" fill="none" stroke="${color(bi)}" stroke-width="2.5"/>`;
+    leaves.filter(l=>l.bi===bi).forEach(l=>s+=`<path d="M${X1+180},${b.y} C${X2-20},${b.y} ${X2-30},${l.y} ${X2},${l.y}" fill="none" stroke="${color(bi)}" stroke-width="1.5" opacity=".7"/>`);
+  });
+  const cl=wrapLines(m.center,7);
+  s+=`<rect x="${X0}" y="${cy-14-cl.length*11}" width="150" height="${28+cl.length*22}" rx="12" fill="var(--mark)"/>`;
+  cl.forEach((t,i)=>s+=`<text x="${X0+75}" y="${cy-cl.length*11+i*22+20}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--markInk)">${esc(t)}</text>`);
+  br.forEach((b,bi)=>{
+    s+=`<g class="node" data-br="${bi}" tabindex="0"><rect x="${X1}" y="${b.y-17}" width="180" height="34" rx="17" fill="var(--sheet)" stroke="${color(bi)}" stroke-width="2"/>
+      <text x="${X1+90}" y="${b.y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="${color(bi)}">${esc(b.title.slice(0,10))}</text></g>`;
+  });
+  leaves.forEach(l=>{const n=byId[l.id]; const lab=(m.leaf?.[l.id]||n.summary||n.text).slice(0,16);
+    s+=`<g class="node" data-id="${l.id}" tabindex="0"><circle cx="${X2}" cy="${l.y}" r="4" fill="${color(l.bi)}"/>
+      <text x="${X2+12}" y="${l.y+5}" font-size="13" fill="var(--text)">${esc(lab)}</text></g>`;});
+  s+=`</svg>`;
+  box.innerHTML=s; box.hidden=false;
+  const open=g=>{
+    const p=$("#pop");
+    if(g.dataset.id){const n=byId[g.dataset.id];p.innerHTML=`<h3>${esc(m.leaf?.[n.id]||n.summary||"段落")}</h3><p class="quote"><mark>${esc(n.text)}</mark></p><button class="btn ghost" id="popx">關閉</button>`;}
+    else{const b=br[+g.dataset.br];p.innerHTML=`<h3>${esc(b.title)}</h3><p class="gist">${esc(b.summary)}</p>${b.ids.map(id=>`<p class="quote" style="font-size:14px">・${esc(byId[id].text.slice(0,80))}${byId[id].text.length>80?"…":""}</p>`).join("")}<button class="btn ghost" id="popx">關閉</button>`;}
+    p.hidden=false; $("#popx").onclick=()=>p.hidden=true;
+  };
+  box.querySelectorAll(".node").forEach(g=>{g.onclick=()=>open(g);g.onkeydown=e=>{if(e.key==="Enter")open(g)}});
+}
+
+/* ---------- 資料儲存：本機 或 Firebase 雲端 ---------- */
+/*
+ * 把你的 Firebase 設定貼在這裡（Firebase 主控台 → 專案設定 → 一般 → 你的應用程式 → SDK 設定）。
+ * 這些值本來就會出現在網頁裡，可以安全地放在 GitHub 上；資料靠 Firestore 安全規則保護。
+ * 留空的話，也可以在 App 的「設定」頁貼上。
+ */
+const FIREBASE_CONFIG = null;
+/* 例如：
+const FIREBASE_CONFIG = {
+  apiKey: "AIza....",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  appId: "1:123:web:abc"
+};
+*/
+const FB_VER="10.12.2";
+let fb=null, cloudUser=null, unsubs=[];
+const mapDocId=book=>"m_"+hash(book).toString(36)+"_"+[...book].length;
+
+function parseFbConfig(txt){
+  if(!txt) return null;
+  try{const o=JSON.parse(txt); if(o.apiKey&&o.projectId) return o;}catch{}
+  const o={}; for(const m of String(txt).matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g)) o[m[1]]=m[2];
+  return o.apiKey&&o.projectId?o:null;
+}
+const fbConfig=()=>FIREBASE_CONFIG||parseFbConfig(LS.get("hn-fbcfg",""));
+
+function loadScript(src){return new Promise((ok,bad)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>bad(new Error(src));document.head.append(s);});}
+async function initFirebase(){
+  const cfg=fbConfig(); if(!cfg) {renderAccount();return;}
+  try{
+    for(const f of ["app","auth","firestore"]) await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-${f}-compat.js`);
+  }catch{ cloudMsg("載入 Firebase 失敗，請確認網路後重新整理。",true); return; }
+  try{ firebase.initializeApp(cfg); }catch(e){ cloudMsg("Firebase 設定有誤："+e.message,true); return; }
+  const db=firebase.firestore();
+  try{ await db.enablePersistence({synchronizeTabs:true}); }catch{}
+  fb={auth:firebase.auth(),db};
+  fb.auth.getRedirectResult().catch(e=>cloudMsg(authErr(e),true));
+  fb.auth.onAuthStateChanged(u=>{ cloudUser=u; u?startCloud():stopCloud(); renderAccount(); });
+}
+
+function startCloud(){
+  stopCloud();
+  const base=fb.db.collection("users").doc(cloudUser.uid);
+  let gotNotes=false,gotMaps=false, cloudNotes=[], cloudMaps={};
+  const apply=()=>{ if(!(gotNotes&&gotMaps)) return; state={notes:cloudNotes,maps:cloudMaps}; onDataChange(); };
+  unsubs.push(base.collection("notes").orderBy("createdAt").onSnapshot(s=>{
+    cloudNotes=s.docs.map(d=>({id:d.id,...d.data()})); gotNotes=true; apply();
+  },e=>cloudMsg("讀取雲端筆記失敗："+e.code,true)));
+  unsubs.push(base.collection("maps").onSnapshot(s=>{
+    cloudMaps={}; s.docs.forEach(d=>{const x=d.data(); if(x.book) cloudMaps[x.book]=x;}); gotMaps=true; apply();
+  },e=>cloudMsg("讀取雲端心智圖失敗："+e.code,true)));
+}
+function stopCloud(){
+  unsubs.forEach(u=>u()); unsubs=[];
+  state=LS.get("hn-data",{notes:[],maps:{}}); onDataChange();
+}
+const userRef=()=>fb.db.collection("users").doc(cloudUser.uid);
+const localNotesCount=()=>(LS.get("hn-data",{notes:[]}).notes||[]).length;
+
+/* 所有寫入都經過這裡：已登入 → Firestore；未登入 → 這支手機 */
+const Store={
+  get cloud(){return !!(fb&&cloudUser)},
+  async addNotes(list){
+    if(!this.cloud){ state.notes.push(...list); persist(); onDataChange(); return; }
+    await commitBatches(list.map(n=>b=>b.set(userRef().collection("notes").doc(n.id),n)));
+  },
+  async deleteNote(id){
+    if(!this.cloud){ state.notes=state.notes.filter(x=>x.id!==id); persist(); onDataChange(); return; }
+    await userRef().collection("notes").doc(id).delete();
+  },
+  async updateNote(id,patch){
+    if(!this.cloud){ Object.assign(state.notes.find(x=>x.id===id)||{},patch); persist(); onDataChange(); return; }
+    await userRef().collection("notes").doc(id).update(patch);
+  },
+  async saveMap(book,map){
+    if(!this.cloud){ state.maps[book]=map; persist(); onDataChange(); return; }
+    await userRef().collection("maps").doc(mapDocId(book)).set({...map,book});
+  },
+  async importData(d){
+    const have=new Set(state.notes.map(n=>n.id));
+    const notes=(d.notes||[]).filter(n=>n?.id&&n.text&&!have.has(n.id));
+    const maps=Object.entries(d.maps||{});
+    if(!this.cloud){ state.notes.push(...notes); Object.assign(state.maps,d.maps||{}); persist(); onDataChange(); return notes.length; }
+    await commitBatches([
+      ...notes.map(n=>b=>b.set(userRef().collection("notes").doc(n.id),n)),
+      ...maps.map(([book,m])=>b=>b.set(userRef().collection("maps").doc(mapDocId(book)),{...m,book}))
+    ]);
+    return notes.length;
+  }
+};
+async function commitBatches(ops){
+  for(let i=0;i<ops.length;i+=400){
+    const b=fb.db.batch(); ops.slice(i,i+400).forEach(op=>op(b)); await b.commit();
+  }
+}
+
+/* 重新畫出目前畫面 */
+function onDataChange(){
+  fillBookList();
+  if(!$("#v-shelf").hidden) renderShelf();
+  if(!$("#v-book").hidden && curBook) renderBook();
+  syncChip();
+}
+function syncChip(){
+  const c=$("#syncChip"); if(!c) return;
+  c.textContent = Store.cloud ? "已同步到雲端" : "只存在這支手機";
+  c.classList.toggle("on",Store.cloud);
+}
+
+/* ---------- 帳號 / 同步設定 UI ---------- */
+function cloudMsg(t,err){const s=$("#cloudStatus"); s.className="status"+(err?" err":""); s.textContent=t;}
+function authErr(e){
+  const c=e?.code||"";
+  if(c==="auth/unauthorized-domain") return `這個網址還沒加入 Firebase 授權網域。到 Firebase 主控台 → Authentication → 設定 → 授權網域，新增「${location.hostname}」。`;
+  if(c==="auth/operation-not-allowed") return "Firebase 還沒開啟 Google 登入。到 Authentication → 登入方式，啟用 Google。";
+  if(c==="auth/popup-closed-by-user"||c==="auth/cancelled-popup-request") return "";
+  if(c==="auth/network-request-failed") return "網路連線失敗，請再試一次。";
+  return "登入失敗："+(e?.message||c);
+}
+function renderAccount(){
+  const box=$("#cloudBox"); if(!box) return;
+  const cfg=fbConfig();
+  if(!cfg){
+    box.innerHTML=`<p class="help">還沒設定 Firebase。把 Firebase 的 SDK 設定（firebaseConfig）整段貼在下面，按「儲存並連線」。</p>
+      <textarea id="fbcfg" placeholder='const firebaseConfig = {\n  apiKey: "...",\n  authDomain: "...",\n  projectId: "...",\n  appId: "..."\n};' style="font-family:ui-monospace,monospace;font-size:13px;min-height:130px"></textarea>
+      <div class="row"><button class="btn" id="fbSave">儲存並連線</button></div>`;
+    $("#fbSave").onclick=()=>{
+      const c=parseFbConfig($("#fbcfg").value);
+      if(!c){cloudMsg("看不懂這段設定，請確認有包含 apiKey 和 projectId。",true);return;}
+      LS.set("hn-fbcfg",JSON.stringify(c)); location.reload();
+    };
+  } else if(!fb){
+    box.innerHTML=`<p class="help">正在連線 Firebase…</p>`;
+  } else if(!cloudUser){
+    box.innerHTML=`<p class="help">用 Google 帳號登入後，手機和電腦會看到同一個書櫃。</p>
+      <div class="row"><button class="btn" id="fbLogin">用 Google 登入</button>
+      ${FIREBASE_CONFIG?"":`<button class="btn ghost" id="fbReset">更換 Firebase 設定</button>`}</div>`;
+    $("#fbLogin").onclick=login;
+    $("#fbReset") && ($("#fbReset").onclick=()=>{LS.set("hn-fbcfg","");location.reload();});
+  } else {
+    const n=localNotesCount();
+    box.innerHTML=`<p class="help">已登入：<b style="color:var(--text);font-weight:400">${esc(cloudUser.email||cloudUser.displayName||"Google 帳號")}</b></p>
+      ${n?`<div class="notice">這支手機裡還有 ${n} 段之前存的筆記，還沒放上雲端。<div class="row" style="margin-top:8px"><button class="btn" id="fbMigrate">上傳到雲端</button></div></div>`:""}
+      <div class="row"><button class="btn sec" id="fbLogout">登出</button></div>`;
+    $("#fbLogout").onclick=()=>fb.auth.signOut();
+    $("#fbMigrate") && ($("#fbMigrate").onclick=migrateLocal);
+  }
+  syncChip();
+}
+async function login(){
+  const p=new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt:"select_account"});
+  cloudMsg("登入中…");
+  try{ await fb.auth.signInWithPopup(p); cloudMsg(""); }
+  catch(e){
+    if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/web-storage-unsupported"].includes(e.code)){
+      try{ await fb.auth.signInWithRedirect(p); return; }catch(e2){ cloudMsg(authErr(e2),true); return; }
+    }
+    cloudMsg(authErr(e),!!authErr(e));
+  }
+}
+async function migrateLocal(){
+  const local=LS.get("hn-data",{notes:[],maps:{}});
+  const btn=$("#fbMigrate"); btn.disabled=true; cloudMsg("上傳中…");
+  try{
+    await commitBatches([
+      ...(local.notes||[]).map(n=>b=>b.set(userRef().collection("notes").doc(n.id),n)),
+      ...Object.entries(local.maps||{}).map(([book,m])=>b=>b.set(userRef().collection("maps").doc(mapDocId(book)),{...m,book}))
+    ]);
+    LS.set("hn-data-uploaded-backup",local);   // 留一份以防萬一
+    LS.set("hn-data",{notes:[],maps:{}});
+    cloudMsg(`已上傳 ${local.notes.length} 段筆記。`); renderAccount();
+  }catch(e){ btn.disabled=false; cloudMsg("上傳失敗："+(e.code||e.message)+"。請確認 Firestore 安全規則已設定。",true); }
+}
+
+/* ---------- backup ---------- */
+$("#exportBtn").onclick=async()=>{
+  const json=JSON.stringify(state,null,1), name=`劃線筆記備份-${new Date().toISOString().slice(0,10)}.json`;
+  const file=new File([json],name,{type:"application/json"});
+  try{ if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:name});$("#backupStatus").textContent="已匯出";return;} }catch(e){ if(e.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=name; a.click();
+  $("#backupStatus").textContent="已下載備份檔";
+};
+$("#importFile").onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    var d=JSON.parse(await f.text());
+    if(!Array.isArray(d.notes)) throw 0;
+  }catch{$("#backupStatus").textContent="這個檔案不是劃線筆記的備份檔。";e.target.value="";return;}
+  try{ const add=await Store.importData(d); $("#backupStatus").textContent=`已匯入 ${add} 段新筆記。`; }
+  catch(err){ $("#backupStatus").textContent="匯入失敗："+(err.code||err.message); }
+  e.target.value="";
+};
+
+/* ---------- boot ---------- */
+fillBookList(); refreshKeyNotice(); renderAccount(); initFirebase();
+$("#syncChip").onclick=()=>$("#tab-set").click();
+function alertBox(t){const p=$("#pop");p.innerHTML=`<p class="err" style="margin:0">${esc(t)}</p><button class="btn ghost" id="popx">關閉</button>`;p.hidden=false;$("#popx").onclick=()=>p.hidden=true;}
+</script>
+</body>
+</html>
