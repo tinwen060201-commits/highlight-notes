@@ -109,7 +109,9 @@ textarea{resize:vertical;min-height:96px;line-height:1.8}
 .shelf-note{font-size:13px;color:var(--muted);text-align:center;margin:0}
 
 /* book page */
-.book-head{display:flex;align-items:center;gap:12px}
+.book-head{display:flex;align-items:flex-start;gap:12px}
+.bookHeadText{display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:1;min-width:0}
+.bookHeadText .btn.ghost{padding:2px 0}
 .book-head .mini{width:26px;height:64px;border:var(--line);border-radius:4px;flex:none;box-shadow:inset -4px 0 0 rgba(0,0,0,.16)}
 #bookTitle{margin:0;font-size:24px;line-height:1.3;text-wrap:balance;font-weight:400}
 .seg{display:flex;background:var(--sheet);border:var(--line);border-radius:999px;padding:4px;gap:4px;box-shadow:2px 3px 0 var(--ink)}
@@ -126,6 +128,8 @@ textarea{resize:vertical;min-height:96px;line-height:1.8}
 .notice{font-size:14px;background:var(--accentSoft);color:var(--text);padding:10px 14px;border-radius:14px;border:var(--line)}
 .help{font-size:14px;color:var(--muted);margin:0}
 .help a{color:var(--accent)}
+.bookChips{display:flex;flex-wrap:wrap;gap:8px}
+.chipBtn{font:inherit;font-size:14px;color:var(--text);background:var(--paper,var(--wall));border:2px solid var(--ink);border-radius:999px;padding:2px 12px;cursor:pointer}
 .chipRow{display:flex;justify-content:center;margin-top:8px}
 .chip{font:inherit;font-size:12px;color:var(--muted);background:var(--sheet);border:2px solid var(--ink);border-radius:999px;padding:1px 10px;cursor:pointer}
 .chip.on{color:var(--markInk);background:var(--accentSoft)}
@@ -154,7 +158,7 @@ hr{border:0;border-top:2.5px dashed var(--muted);width:100%;opacity:.5}
     <div id="needKey" class="notice" hidden>還沒設定 API 金鑰。請先到「設定」貼上金鑰，才能辨識。</div>
     <div class="field">
       <label class="lbl" for="book">書名</label>
-      <input type="text" id="book" list="booklist" placeholder="例如：原子習慣（留空讓 AI 從頁首判斷）" autocomplete="off">
+      <input type="text" id="book" list="booklist" placeholder="選照片時會詢問，也可以先填好" autocomplete="off">
       <datalist id="booklist"></datalist>
     </div>
     <label class="drop" for="file">
@@ -182,7 +186,7 @@ hr{border:0;border-top:2.5px dashed var(--muted);width:100%;opacity:.5}
   <!-- 單本書 -->
   <section id="v-book" hidden>
     <button class="btn ghost back" id="backShelf">← 書櫃</button>
-    <div class="book-head"><span class="mini" id="bookMini"></span><h2 id="bookTitle"></h2></div>
+    <div class="book-head"><span class="mini" id="bookMini"></span><div id="bookHeadText" class="bookHeadText"></div></div>
     <div class="seg">
       <button id="seg-notes" aria-pressed="true">段落</button>
       <button id="seg-map" aria-pressed="false">心智圖</button>
@@ -342,11 +346,36 @@ function books(){
 }
 function fillBookList(){$("#booklist").innerHTML=books().map(([b])=>`<option value="${esc(b)}">`).join("");}
 
+/* ---------- 先問書名 ---------- */
+let aiGuessBook=false;
+function askBook(){
+  return new Promise(done=>{
+    const p=$("#pop"), cur=$("#book").value.trim();
+    const recent=books().slice(0,8).map(([b])=>b);
+    p.innerHTML=`<h3>這些照片是哪一本書？</h3>
+      <p class="help">這次辨識出來的段落都會存到這本書，之後還可以改。</p>
+      <input type="text" id="askBookInput" list="booklist" value="${esc(cur)}" placeholder="輸入書名">
+      ${recent.length?`<div class="bookChips">${recent.map(b=>`<button class="chipBtn" data-b="${esc(b)}">${esc(b)}</button>`).join("")}</div>`:""}
+      <div class="row"><button class="btn" id="askOk">確定</button><button class="btn ghost" id="askAI">不確定，讓 AI 從頁首判斷</button></div>`;
+    p.hidden=false;
+    const inp=$("#askBookInput"); setTimeout(()=>inp.focus(),50);
+    const finish=v=>{p.hidden=true;done(v);};
+    p.querySelectorAll(".chipBtn").forEach(b=>b.onclick=()=>{inp.value=b.dataset.b;});
+    $("#askOk").onclick=()=>{
+      const v=cleanTitle(inp.value);
+      if(!v){inp.placeholder="請輸入書名，或選「讓 AI 判斷」";inp.focus();return;}
+      $("#book").value=v; aiGuessBook=false; finish(v);
+    };
+    inp.onkeydown=e=>{if(e.key==="Enter")$("#askOk").click();};
+    $("#askAI").onclick=()=>{$("#book").value=""; aiGuessBook=true; finish("");};
+  });
+}
 /* ---------- pick images ---------- */
 $("#file").onchange=e=>{
   files=[...e.target.files]; $("#thumbs").innerHTML="";
   files.forEach(f=>{const i=new Image();i.src=URL.createObjectURL(f);i.alt="";$("#thumbs").append(i)});
   updateGo();
+  if(files.length) askBook();
 };
 function updateGo(){$("#go").disabled=!files.length;}
 
@@ -362,7 +391,8 @@ const OCR_PROMPT = hint => `這是一張書頁照片（繁體或簡體中文，�
 $("#go").onclick=async()=>{
   if(!settings().key){refreshKeyNotice();$("#scanStatus").className="status err";$("#scanStatus").textContent="請先到「設定」貼上 API 金鑰。";return;}
   pending=[]; renderPending();
-  const hint=$("#book").value.trim();
+  if(!$("#book").value.trim() && !aiGuessBook){ await askBook(); }
+  const hint=cleanTitle($("#book").value);
   $("#go").disabled=true; $("#stop").hidden=false;
   const st=$("#scanStatus"); st.className="status"; let failed=false;
   for(let i=0;i<files.length;i++){
@@ -448,7 +478,7 @@ function renderShelf(){
   el.innerHTML=`<div class="shelf">${html}</div><div class="shelf-legs"><span></span><span></span></div>`+
     (b.length?`<p class="shelf-note">點書背打開。書背越厚，劃線越多。</p>`
              :`<div class="empty-sign">書櫃還空空的<br><small style="color:var(--muted)">到「拍照辨識」上傳一張劃線書頁吧</small></div>`);
-  el.querySelectorAll(".spine").forEach(x=>x.onclick=()=>{curBook=x.dataset.b;setSeg("notes");renderBook();show("book")});
+  el.querySelectorAll(".spine").forEach(x=>x.onclick=()=>{curBook=x.dataset.b;editingNote=noteDraft=titleDraft=null;setSeg("notes");renderBook();show("book")});
 }
 
 /* ---------- one book ---------- */
@@ -460,27 +490,77 @@ function setSeg(s){
 $("#seg-notes").onclick=()=>setSeg("notes");
 $("#seg-map").onclick=()=>{setSeg("map");renderMap()};
 
+/* 編輯狀態：重新繪製時保留草稿，雲端同步觸發的重畫不會把正在打的字洗掉 */
+let editingNote=null, noteDraft=null, titleDraft=null;
 function renderBook(){
-  $("#bookTitle").textContent=curBook; $("#bookMini").style.background=spineColor(curBook);
+  $("#bookMini").style.background=spineColor(curBook);
+  const head=$("#bookHeadText");
+  if(titleDraft===null){
+    head.innerHTML=`<h2 id="bookTitle">${esc(curBook)}</h2><button class="btn ghost" id="editTitle">編輯書名</button>`;
+    $("#editTitle").onclick=()=>{titleDraft=curBook;renderBook();$("#titleInput").focus();};
+  }else{
+    head.innerHTML=`<input type="text" id="titleInput" value="${esc(titleDraft)}" aria-label="書名">
+      <p class="help">這本書的 ${bookNotes().length} 段筆記會一起改成新書名。改成已存在的書名，會合併成同一本。</p>
+      <div class="row"><button class="btn" id="titleSave">儲存</button><button class="btn ghost" id="titleCancel">取消</button></div>`;
+    $("#titleInput").oninput=e=>titleDraft=e.target.value;
+    $("#titleCancel").onclick=()=>{titleDraft=null;renderBook();};
+    $("#titleSave").onclick=async()=>{
+      const to=cleanTitle(titleDraft)||"未分類", from=curBook;
+      titleDraft=null;
+      if(to!==from){
+        curBook=to;   // 先切換，資料更新觸發重畫時才會停在這本書
+        try{ await Store.renameBook(from,to); }
+        catch(err){ curBook=from; alertBox("改書名失敗："+(err.code||err.message)); }
+      }
+      renderBook();
+    };
+  }
   const ns=bookNotes(), el=$("#bookNotes");
   if(!ns.length){renderShelf();show("shelf");return;}
   el.innerHTML="";
   ns.forEach(n=>{
     const c=document.createElement("div");c.className="card";
-    c.innerHTML=`<p class="quote"><mark>${esc(n.text)}</mark></p>
-      ${n.summary?`<p class="gist">重點：<b>${esc(n.summary)}</b></p>`:""}
-      <div class="meta"><span>${n.createdAt?new Date(n.createdAt).toLocaleDateString("zh-TW"):""}</span>
-      <span class="row" style="gap:0"><button class="btn ghost" data-a="move">改書名</button><button class="btn danger" data-a="del">刪除</button></span></div>`;
-    c.querySelector('[data-a="del"]').onclick=e=>{
-      const b=e.target;
-      if(b.dataset.sure){Store.deleteNote(n.id).catch(err=>alertBox("刪除失敗："+(err.code||err.message)));}
-      else{b.dataset.sure=1;b.textContent="再按一次確認刪除";}
-    };
-    c.querySelector('[data-a="move"]').onclick=()=>{
-      const m=c.querySelector(".meta");
-      m.innerHTML=`<input type="text" list="booklist" value="${esc(n.book)}"><button class="btn sec">移動</button>`;
-      m.querySelector("button").onclick=()=>{Store.updateNote(n.id,{book:cleanTitle(m.querySelector("input").value)||"未分類"}).catch(err=>alertBox("移動失敗："+(err.code||err.message)));};
-    };
+    if(editingNote===n.id){
+      const d=noteDraft;
+      c.innerHTML=`<label class="lbl" for="ed-text">原文</label>
+        <textarea id="ed-text">${esc(d.text)}</textarea>
+        <label class="lbl" for="ed-sum">重點</label>
+        <input type="text" id="ed-sum" value="${esc(d.summary)}">
+        <label class="lbl" for="ed-book">書名</label>
+        <input type="text" id="ed-book" list="booklist" value="${esc(d.book)}">
+        <div class="row"><button class="btn" data-a="save">儲存</button><button class="btn ghost" data-a="cancel">取消</button></div>`;
+      c.querySelector("#ed-text").oninput=e=>d.text=e.target.value;
+      c.querySelector("#ed-sum").oninput=e=>d.summary=e.target.value;
+      c.querySelector("#ed-book").oninput=e=>d.book=e.target.value;
+      c.querySelector('[data-a="cancel"]').onclick=()=>{editingNote=noteDraft=null;renderBook();};
+      c.querySelector('[data-a="save"]').onclick=async()=>{
+        const patch={};
+        const text=d.text.trim(), summary=d.summary.trim(), book=cleanTitle(d.book)||"未分類";
+        if(text&&text!==n.text) patch.text=text;
+        if(summary!==(n.summary||"")) patch.summary=summary;
+        if(book!==n.book) patch.book=book;
+        editingNote=noteDraft=null;            // 沒改任何東西也直接關閉編輯
+        if(Object.keys(patch).length){
+          try{ await Store.updateNote(n.id,patch); }
+          catch(err){ alertBox("儲存失敗："+(err.code||err.message)); }
+        }
+        renderBook();
+      };
+    }else{
+      c.innerHTML=`<p class="quote"><mark>${esc(n.text)}</mark></p>
+        ${n.summary?`<p class="gist">重點：<b>${esc(n.summary)}</b></p>`:""}
+        <div class="meta"><span>${n.createdAt?new Date(n.createdAt).toLocaleDateString("zh-TW"):""}</span>
+        <span class="row" style="gap:0"><button class="btn ghost" data-a="edit">編輯</button><button class="btn danger" data-a="del">刪除</button></span></div>`;
+      c.querySelector('[data-a="edit"]').onclick=()=>{
+        editingNote=n.id; noteDraft={text:n.text,summary:n.summary||"",book:n.book}; renderBook();
+        $("#ed-text")?.focus();
+      };
+      c.querySelector('[data-a="del"]').onclick=e=>{
+        const b=e.target;
+        if(b.dataset.sure){Store.deleteNote(n.id).catch(err=>alertBox("刪除失敗："+(err.code||err.message)));}
+        else{b.dataset.sure=1;b.textContent="再按一次確認刪除";}
+      };
+    }
     el.append(c);
   });
   renderMap();
@@ -640,6 +720,21 @@ const Store={
   async saveMap(book,map){
     if(!this.cloud){ state.maps[book]=map; persist(); onDataChange(); return; }
     await userRef().collection("maps").doc(mapDocId(book)).set({...map,book});
+  },
+  async renameBook(from,to){
+    const ids=state.notes.filter(n=>(n.book||"未分類")===from).map(n=>n.id);
+    const m=state.maps[from], keepTarget=!!state.maps[to];
+    if(!this.cloud){
+      state.notes.forEach(n=>{if(ids.includes(n.id)) n.book=to;});
+      if(m){ if(!keepTarget) state.maps[to]={...m}; delete state.maps[from]; }
+      persist(); onDataChange(); return;
+    }
+    const ops=ids.map(id=>b=>b.update(userRef().collection("notes").doc(id),{book:to}));
+    if(m){
+      if(!keepTarget) ops.push(b=>b.set(userRef().collection("maps").doc(mapDocId(to)),{...m,book:to}));
+      ops.push(b=>b.delete(userRef().collection("maps").doc(mapDocId(from))));
+    }
+    await commitBatches(ops);
   },
   async importData(d){
     const have=new Set(state.notes.map(n=>n.id));
