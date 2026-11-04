@@ -74,7 +74,6 @@ textarea{resize:vertical;min-height:96px;line-height:1.8}
 .card{background:var(--sheet);border:var(--line);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0;box-shadow:3px 4px 0 var(--ink)}
 .card.off{opacity:.45}
 .quote{line-height:1.9;margin:0;white-space:pre-wrap;word-break:break-word}
-.quote mark{background:linear-gradient(transparent 52%,var(--mark) 52%);color:inherit;border-radius:3px}
 .gist{font-size:14px;color:var(--muted);margin:0}
 .gist b{color:var(--text);font-weight:400}
 .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
@@ -559,7 +558,7 @@ function renderBook(){
         renderBook();
       };
     }else{
-      c.innerHTML=`<p class="quote"><mark>${esc(n.text)}</mark></p>
+      c.innerHTML=`<p class="quote">${esc(n.text)}</p>
         ${n.summary?`<p class="gist">重點：<b>${esc(n.summary)}</b></p>`:""}
         <div class="meta"><span>${n.createdAt?new Date(n.createdAt).toLocaleDateString("zh-TW"):""}</span>
         <span class="row" style="gap:0"><button class="btn ghost" data-a="edit">編輯</button><button class="btn danger" data-a="del">刪除</button></span></div>`;
@@ -647,7 +646,7 @@ function renderMap(){
   box.innerHTML=s; box.hidden=false;
   const open=g=>{
     const p=$("#pop");
-    if(g.dataset.id){const n=byId[g.dataset.id];p.innerHTML=`<h3>${esc(m.leaf?.[n.id]||n.summary||"段落")}</h3><p class="quote"><mark>${esc(n.text)}</mark></p><button class="btn ghost" id="popx">關閉</button>`;}
+    if(g.dataset.id){const n=byId[g.dataset.id];p.innerHTML=`<h3>${esc(m.leaf?.[n.id]||n.summary||"段落")}</h3><p class="quote">${esc(n.text)}</p><button class="btn ghost" id="popx">關閉</button>`;}
     else{const b=br[+g.dataset.br];p.innerHTML=`<h3>${esc(b.title)}</h3><p class="gist">${esc(b.summary)}</p>${b.ids.map(id=>`<p class="quote" style="font-size:14px">・${esc(byId[id].text.slice(0,80))}${byId[id].text.length>80?"…":""}</p>`).join("")}<button class="btn ghost" id="popx">關閉</button>`;}
     p.hidden=false; $("#popx").onclick=()=>p.hidden=true;
   };
