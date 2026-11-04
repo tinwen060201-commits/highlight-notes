@@ -383,21 +383,29 @@ const OCR_PROMPT = hint => `這是一張書頁照片（繁體或簡體中文，�
 
 【只擷取有螢光筆底色的文字】
 - 判斷標準：文字背後有一層半透明的彩色底色（常見黃、粉紅、綠、藍、橘），顏色和紙張原本的白色／米色明顯不同，邊緣通常不太整齊，像是手塗上去的。
-- 底色可能跨好幾行。同一段連續塗色的文字要接成一段，換行處直接接上。
+- 底色可能跨好幾行，換行處直接接上。
 - 只抄有底色覆蓋的範圍，底色開始前、結束後的文字都不要抄進來。
 
 【以下都不算，一律忽略】
-- 沒有底色的一般文字，即使就在塗色段落的旁邊。
+- 沒有底色的一般文字。
 - 只有底線、圈選、括號、頁邊畫線，但沒有塗底色的文字。
 - 書本印刷本身的設計：灰色或淺色的印刷色塊、方框、引言框、粗體、標題、頁首頁尾、頁碼、圖說。這些是印刷出來的（顏色均勻、邊緣筆直），不是讀者畫的。
+
+【同一章節合併成一段，中間跳過的用「……」】
+- 依照片裡的章節或小標題分段：同一個章節（同一個小標題底下）的所有螢光筆片段，按閱讀順序合併成「一段」。
+- 兩個塗色片段之間如果夾著沒有塗色的文字，不要抄那些文字，改用「……」（中文刪節號）連接。
+- 兩個塗色片段如果在原文中緊接著、中間沒有任何未塗色的字，就直接接上，不要加「……」。
+- 開頭和結尾不要加「……」。
+- 照片中出現新的章節或小標題時，才開始新的一段。整頁都在同一章節時，只輸出一段。
+- 例：原文「A未塗B塗C未塗D塗」→「B……D」。
 
 【輸出】
 1. text：逐字照抄原文，保留原本的標點與用字，不要改寫、不要翻譯、不要補字。看不清楚的字用「□」代替。
 2. summary：一句 15 字以內的重點概括（繁體中文）。
-3. color：這段螢光筆的顏色（例如「黃」「粉紅」）。
+3. color：這段主要的螢光筆顏色（例如「黃」「粉紅」）。
 4. book_guess：頁首或頁尾看得出書名就填入，否則空字串。${hint?`使用者說這本書是「${hint}」。`:""}
 先仔細看整頁哪些地方有螢光筆底色，再抄寫。若整頁沒有任何螢光筆底色，passages 回傳空陣列，不要勉強湊。
-只回覆 JSON，不要其他文字，格式：{"book_guess":"","passages":[{"text":"原文","summary":"概括","color":"黃"}]}`;
+只回覆 JSON，不要其他文字，格式：{"book_guess":"","passages":[{"text":"片段一……片段二","summary":"概括","color":"黃"}]}`;
 
 $("#go").onclick=async()=>{
   if(!settings().key){refreshKeyNotice();$("#scanStatus").className="status err";$("#scanStatus").textContent="請先到「設定」貼上 API 金鑰。";return;}
@@ -414,7 +422,7 @@ $("#go").onclick=async()=>{
       const r=await askAI([{type:"image",source:{type:"base64",media_type:"image/jpeg",data}},{type:"text",text:OCR_PROMPT(hint)}],{signal:ctl.signal});
       const guess=(r?.book_guess||"").trim();
       (Array.isArray(r?.passages)?r.passages:[]).forEach(p=>{
-        if(p?.text) pending.push({color:String(p.color||"").trim(),text:String(p.text).trim(),summary:String(p.summary||"").trim(),book:hint||guess||"未分類",page:i+1,keep:true});
+        if(p?.text) pending.push({color:String(p.color||"").trim(),text:String(p.text).trim().replace(/\s*(?:\.{3,}|…+|⋯+)\s*/g,"……").replace(/^……|……$/g,""),summary:String(p.summary||"").trim(),book:hint||guess||"未分類",page:i+1,keep:true});
       });
       renderPending();
     }catch(e){
